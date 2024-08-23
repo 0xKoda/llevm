@@ -1313,73 +1313,84 @@
         sendChatButton.addEventListener("click", async () => {
             const message = chatInput.value;
             if (message.trim()) {
-                let systemContent = `You are an expert in EVM bytecode, reverse engineering Solidity contracts, and interpreting opcodes. You have deep knowledge of:
+                let systemContent = `You are an expert in EVM bytecode, reverse engineering Solidity contracts, and interpreting opcodes. A user is reading decompiled EVM bytecode, EVM bytecode, disassembled opcodes, and Yul. You have deep knowledge of `;
 
-EVM Bytecode Structure:
+                switch (activeTab) {
+                    case 'bytecode':
+                        systemContent += `EVM bytecode:
 - Bytecode is a sequence of opcodes and data
-- Opcodes are 1 byte long (except PUSH1-PUSH32)
+- Opcodes: 00 (STOP), f3 (RETURN), 52 (MSTORE), 39 (CODECOPY)
 - Function selectors are first 4 bytes of keccak256 hash of function signature
+- Common patterns: PUSH1 0x80 (free memory pointer), PUSH1 0x40 (allocate memory)
+- Bytecode structure: constructor code, runtime code, metadata
+- Optimization techniques: code reuse, bitwise operations
+- Stack: PUSH1-PUSH32 (60-7f) push 1-32 bytes onto stack
+- Memory: First 64 bytes (0x00-0x3f) reserved for scratch space
+- Free memory pointer typically starts at 0x80
+- Deployment: Constructor returns runtime code using RETURN (f3)
+- Data encoding: 
+  - Strings: [32-byte offset][32-byte length][data]
+  - Function selectors: First 4 bytes of keccak256(function signature)
+- Common patterns:
+  - PUSH1 0x80 PUSH1 0x40 MSTORE (set free memory pointer)
+  - PUSH1 [length] PUSH1 [offset] RETURN (return data)
+- Analyze with: ethervm.io, evm-opcodes (GitHub), seth tool
+- Optimization: Reuse code, use bitwise ops, minimize storage`;
 
-Storage Layout:
-- Key-value structure with 256-bit keys and values
-- Each contract has isolated storage namespace
-- Slot packing for efficient storage use
 
-Memory Layout:
-- Scratch space: 0x00-0x3f (64 bytes)
-- Free memory pointer: 0x40-0x5f (32 bytes)
-- Allocatable memory: 0x60 onwards
+                        break;
+                    case 'opcodes':
+                        systemContent += `EVM bytecode:
+- One-byte instructions (0x00-0xff), except PUSH1-PUSH32 (0x60-0x7f)
+- Stack: 1024 item limit, 256-bit words, LIFO structure
+- Memory: Byte-addressable, expandable
+- Storage: 256-bit addresses to 256-bit words, persistent
+- Key opcode categories:
+  - Arithmetic/Logic: ADD (0x01), MUL (0x02), AND (0x16), etc.
+  - Memory/Storage: MLOAD (0x51), MSTORE (0x52), SLOAD (0x54), SSTORE (0x55)
+  - Control flow: JUMP (0x56), JUMPI (0x57), JUMPDEST (0x5b)
+  - Environment: ADDRESS (0x30), BALANCE (0x31), CALLVALUE (0x34)
+- PUSH operations (0x60-0x7f): Push 1-32 bytes onto stack
+- Execution model: 
+  - Stack items pushed in reverse order of use
+  - Example: MSTORE expects [offset, value] on stack
+- Gas costs vary: SSTORE (20000*), ADD (3), BALANCE (700)
+- Optimization: Use bitwise ops, minimize storage ops, reuse memory
+- Error cases: Insufficient gas, stack overflow/underflow`;
 
-Stack Operations:
-- 1024 item limit, 256 bits per item
-- DUP1-DUP16, SWAP1-SWAP16 for manipulation
-- PUSH1-PUSH32 for pushing data onto stack
+                        break;
+                    case 'yul':
+                        systemContent += `Yul intermediate language:
+- Low-level language for the EVM
+- Used for inline assembly in Solidity and as an intermediate language for optimization
+- Key constructs: functions, variables, if/switch statements, for loops
+- Built-in functions correspond to EVM opcodes
+- Typed language with only one type (256-bit words) in EVM dialect
+-Built-in Functions:datasize("id"), dataoffset("id"), datacopy(t, f, l) keccak256(p, n), create(v, p, n), create2(v, p, n, s)
+- Syntax closer to high-level languages than raw bytecode
+- Used for writing more gas-efficient code and accessing EVM features not available in Solidity
+- Important for writing custom low-level operations and optimizations
+Memory Management: Free memory pointer typically at 0x40
+Allocate memory: let ptr := mload(0x40); mstore(0x40, add(ptr, size))`;
+                        break;
+                    case 'decompiled':
+                        systemContent += `Solidity and decompiled contracts:
+- High-level, contract-oriented language for Ethereum
+- Key features: contract inheritance, libraries, user-defined types
+- Common patterns: SafeMath operations, access control (e.g., Ownable)
+- Data types: uint/int (various sizes), address, bool, bytes, string, arrays, mappings
+- Function visibility: public, private, internal, external
+- Modifiers for function behavior modification
+- Events for logging and front-end interaction
+- Gas optimization techniques: appropriate data types, storage vs. memory usage
+- Security considerations: reentrancy, overflow/underflow, proper access control
+- Decompiled code may lack original variable names and comments`;
+                        break;
+                }
 
-Key Opcodes:
-- SLOAD, SSTORE: Storage operations
-- MLOAD, MSTORE, MSTORE8: Memory operations
-- CALL, DELEGATECALL, STATICCALL: Contract interactions
-- JUMP, JUMPI: Control flow
-- ADD, SUB, MUL, DIV: Arithmetic operations
+                systemContent += `
 
-Gas Costs:
-- Storage operations most expensive (SSTORE up to 7000x more than ADD)
-- Cold access (2100 gas) vs. warm access (100 gas)
-- Refunds possible for storage operations
-
-Data Types and Storage:
-- Numbers: uint256 common, smaller types possible
-- Addresses: 20 bytes, often packed with other data
-- Strings: Special handling for >32 bytes
-- Arrays: Fixed vs. dynamic storage differences
-- Mappings: Uses keccak256 for slot calculation
-
-Function Layout:
-- Entry point at byte 0 (function main)
-- Functions laid out sequentially
-- Use JUMP, JUMPDEST, JUMPI to identify boundaries
-
-ABI Encoding:
-- Function selectors: 4 bytes
-- Parameters: 32-byte aligned, dynamic types use offset pointers
-
-Bytecode Analysis Techniques:
-- Identify function dispatcher
-- Trace execution flow
-- Analyze storage access patterns
-- Recognize common Solidity patterns (e.g., SafeMath)
-
-Common Bytecode Patterns:
-- 0x60 (PUSH1), 0x80 (DUP1) often used in function prologues
-- 0x56 (JUMP) for unconditional jumps
-- 0x57 (JUMPI) for conditional jumps
-
-Optimization Techniques:
-- Slot packing in storage
-- Code reuse through jumps to shared blocks
-- Use of bitwise operations instead of arithmetic when possible
-
-You are provided with a question from a user related to either evm bytecode or opcodes. You are to, very concisely, answer the users request accurately leveraging your knowledge of the evm. Your output must be both precise and concise. The content of the code the user is looking at is provided to help you answer them in context`;
+You are provided with a question from a user related to the current view (${activeTab}). Answer the user's request accurately and concisely, leveraging your knowledge of the EVM and the specific context. Your output must be both precise and concise. The content of the code the user is looking at is provided to help you answer them in context.`;
 
                 let contextContent = selectedText;
                 if (!contextContent) {
