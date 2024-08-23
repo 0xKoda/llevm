@@ -97,14 +97,74 @@
 
         #bytecode-display,
         #decompiled-display,
-        #opcodes-display {
+        #opcodes-display,
+        #yul-display,
+        #instructions-display {
             flex-grow: 1;
             padding: 10px;
             overflow-y: auto;
             background-color: #282A36;
-            border-top: 1px solid #44475A;
+            color: #F8F8F2;
+            font-family: 'Monaspace Argon', monospace;
+            line-height: 1.4;
             white-space: pre-wrap;
             word-wrap: break-word;
+        }
+
+        #instructions-display {
+            white-space: normal;
+        }
+
+        #instructions-display h2 {
+            color: #FF79C6;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        #instructions-display ol {
+            padding-left: 20px;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        #instructions-display li {
+            margin-bottom: 5px;
+        }
+
+        #instructions-display p {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        #instructions-display br {
+            display: none;
+        }
+
+        /* Remove any pre-existing styles that might affect spacing */
+        #instructions-display pre,
+        #instructions-display code {
+            white-space: normal;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Theme-specific styles */
+        .one-dark #instructions-display {
+            background-color: #282C34;
+            color: #ABB2BF;
+        }
+
+        .one-dark #instructions-display h2 {
+            color: #C678DD;
+        }
+
+        .catppuccin-mocha #instructions-display {
+            background-color: #1e1e2e;
+            color: #cdd6f4;
+        }
+
+        .catppuccin-mocha #instructions-display h2 {
+            color: #cba6f7;
         }
 
         .right-panel {
@@ -278,9 +338,11 @@
         #bytecode-display pre,
         #decompiled-display pre,
         #opcodes-display pre,
+        #yul-display pre,
         #bytecode-display code,
         #decompiled-display code,
         #opcodes-display code,
+        #yul-display code,
         .hljs,
         .language-solidity,
         .language-plaintext,
@@ -292,40 +354,16 @@
         #bytecode-display,
         #decompiled-display,
         #opcodes-display,
+        #yul-display,
         #bytecode-display pre,
         #decompiled-display pre,
         #opcodes-display pre,
+        #yul-display pre,
         #bytecode-display code,
         #decompiled-display code,
-        #opcodes-display code {
+        #opcodes-display code,
+        #yul-display code {
             color: #F8F8F2;
-        }
-
-        #instructions-display {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
-            background-color: #282A36;
-            color: #F8F8F2;
-            font-family: 'Monaspace Argon', monospace;
-            line-height: 1.6;
-        }
-
-        #instructions-display h2 {
-            color: #FF79C6;
-            margin-bottom: 15px;
-        }
-
-        #instructions-display ol {
-            padding-left: 20px;
-        }
-
-        #instructions-display li {
-            margin-bottom: 10px;
-        }
-
-        #instructions-display p {
-            margin-top: 20px;
         }
 
         .opcode-tooltip {
@@ -480,6 +518,7 @@
         .one-dark #bytecode-display,
         .one-dark #decompiled-display,
         .one-dark #opcodes-display,
+        .one-dark #yul-display,
         .one-dark #instructions-display,
         .one-dark #chat-history {
             background-color: #282C34;
@@ -539,6 +578,15 @@
             background-color: rgba(152, 195, 121, 0.2);
         }
 
+        .one-dark #instructions-display {
+            background-color: #282C34;
+            color: #ABB2BF;
+        }
+
+        .one-dark #instructions-display h2 {
+            color: #C678DD;
+        }
+
         body.catppuccin-mocha,
         .catppuccin-mocha html {
             color: #cdd6f4;
@@ -588,6 +636,7 @@
         .catppuccin-mocha #bytecode-display,
         .catppuccin-mocha #decompiled-display,
         .catppuccin-mocha #opcodes-display,
+        .catppuccin-mocha #yul-display,
         .catppuccin-mocha #instructions-display,
         .catppuccin-mocha #chat-history {
             background-color: #1e1e2e;
@@ -646,6 +695,15 @@
         .catppuccin-mocha .allocatable-memory {
             background-color: rgba(166, 227, 161, 0.2);
         }
+
+        .catppuccin-mocha #instructions-display {
+            background-color: #1e1e2e;
+            color: #cdd6f4;
+        }
+
+        .catppuccin-mocha #instructions-display h2 {
+            color: #cba6f7;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sevm@0.6/dist/sevm.js"></script>
@@ -701,37 +759,6 @@
                 });
         }
 
-        function displayBytecode(code) {
-            const scratchSpaceEnd = 64 * 2; // 64 bytes * 2 characters per byte
-            const freeMemoryPointerEnd = 96 * 2; // 96 bytes * 2 characters per byte
-            const allocatableMemoryStart = 128 * 2; // 128 bytes * 2 characters per byte
-
-            let formattedCode = '';
-            for (let i = 0; i < code.length; i += 64) {
-                const line = code.slice(i, i + 64);
-                let coloredLine = '';
-
-                for (let j = 0; j < line.length; j += 2) {
-                    const bytePosition = i + j;
-                    const byte = line.slice(j, j + 2);
-
-                    if (bytePosition < scratchSpaceEnd) {
-                        coloredLine += `<span class="scratch-space">${byte}</span>`;
-                    } else if (bytePosition < freeMemoryPointerEnd) {
-                        coloredLine += `<span class="free-memory-pointer">${byte}</span>`;
-                    } else if (bytePosition >= allocatableMemoryStart) {
-                        coloredLine += `<span class="allocatable-memory">${byte}</span>`;
-                    } else {
-                        coloredLine += byte;
-                    }
-                }
-
-                formattedCode += coloredLine + '\n';
-            }
-
-            document.getElementById('bytecode-display').innerHTML = `<pre>${formattedCode}</pre>`;
-        }
-
         async function decompileContract(bytecode) {
             try {
                 const contract = new sevm.Contract(bytecode);
@@ -758,6 +785,35 @@
             }
         }
 
+        let yul = "";
+
+        async function displayYul(bytecode) {
+            try {
+                const contract = new sevm.Contract(bytecode);
+                await patchContract(contract);
+                yul = contract.yul();
+                const highlightedYul = highlightYul(yul);
+                document.getElementById('yul-display').innerHTML = `<pre>${highlightedYul}</pre>`;
+            } catch (error) {
+                console.error("Error displaying Yul:", error);
+                document.getElementById('yul-display').textContent = "Error displaying Yul. Please try again.";
+            }
+        }
+
+        function highlightYul(code) {
+            const keywords = ['function', 'let', 'if', 'switch', 'case', 'default', 'for', 'break', 'continue', 'leave'];
+            const keywordRegex = new RegExp(`\\b(${keywords.join('|')})\\b`, 'g');
+
+            return code.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;')
+                .replace(keywordRegex, '<span class="keyword">$1</span>')
+                .replace(/(\/\/.*)/g, '<span class="comment">$1</span>')
+                .replace(/(0x[a-fA-F0-9]+)/g, '<span class="number">$1</span>');
+        }
+
     </script>
 </head>
 
@@ -775,11 +831,13 @@
                 <div class="tab active" data-tab="bytecode">Bytecode</div>
                 <div class="tab" data-tab="decompiled">Decompiled</div>
                 <div class="tab" data-tab="opcodes">Opcodes</div>
+                <div class="tab" data-tab="yul">Yul</div>
                 <div class="tab" data-tab="instructions">Instructions</div>
             </div>
             <div id="bytecode-display"></div>
             <div id="decompiled-display" style="display: none;"></div>
             <div id="opcodes-display" style="display: none;"></div>
+            <div id="yul-display" style="display: none;"></div>
             <div id="instructions-display" style="display: none;">
                 <h2>How to Use This Site</h2>
                 <ol>
@@ -787,13 +845,10 @@
                     <li>The contract's bytecode will be displayed in the "Bytecode" tab.</li>
                     <li>Click on the "Decompiled" tab to view the decompiled Solidity-like code.</li>
                     <li>The "Opcodes" tab shows the low-level EVM opcodes of the contract.</li>
-                    <li>Use the chat feature on the right to ask questions about the contract's code or functionality.
-                    </li>
+                    <li>Use the chat feature on the right to ask questions about the contract's code or functionality.</li>
                 </ol>
-                <p>This tool helps you analyze and understand Ethereum smart contracts. If you need assistance, feel free to ask in the chat. The LLM (Hermes-2-Pro-Llama-3-8B) runs entirely in your browser using WebGPU. Please note that the LLM's output may not always be accurate, so don't treat it as definitive. </p>
-        <br />
-        <p>For demonstration purposes only.</p>
-            </p>
+                <p>This tool helps you analyze and understand Ethereum smart contracts. If you need assistance, feel free to ask in the chat. The LLM (Hermes-2-Pro-Llama-3-8B) runs entirely in your browser using WebGPU. Please note that the LLM's output may not always be accurate, so don't treat it as definitive.</p>
+                <p>For demonstration purposes only.</p>
             </div>
         </div>
         <div class="resizer-x"></div>
@@ -817,6 +872,7 @@
         const bytecodeDisplay = document.getElementById("bytecode-display");
         const decompiledDisplay = document.getElementById("decompiled-display");
         const opcodesDisplay = document.getElementById("opcodes-display");
+        const yulDisplay = document.getElementById("yul-display");
         const instructionsDisplay = document.getElementById("instructions-display");
         const chatHistory = document.getElementById("chat-history");
         const chatInput = document.getElementById("chat-message");
@@ -828,6 +884,7 @@
         let bytecode = "";
         let decompiled = "";
         let opcodes = "";
+        let yul = "";
         let activeTab = "bytecode";
         let selectedText = "";
 
@@ -837,35 +894,26 @@
                 tabs.forEach(t => t.classList.remove("active"));
                 tab.classList.add("active");
                 activeTab = tab.dataset.tab;
-                if (activeTab === "bytecode") {
-                    bytecodeDisplay.style.display = "block";
-                    decompiledDisplay.style.display = "none";
-                    opcodesDisplay.style.display = "none";
-                    instructionsDisplay.style.display = "none";
-                } else if (activeTab === "decompiled") {
-                    bytecodeDisplay.style.display = "none";
-                    decompiledDisplay.style.display = "block";
-                    opcodesDisplay.style.display = "none";
-                    instructionsDisplay.style.display = "none";
+                document.getElementById("bytecode-display").style.display = "none";
+                document.getElementById("decompiled-display").style.display = "none";
+                document.getElementById("opcodes-display").style.display = "none";
+                document.getElementById("yul-display").style.display = "none";
+                document.getElementById("instructions-display").style.display = "none";
+                document.getElementById(`${activeTab}-display`).style.display = "block";
+                
+                if (activeTab === "decompiled" && !decompiled) {
                     decompileContract(bytecode);
-                } else if (activeTab === "opcodes") {
-                    bytecodeDisplay.style.display = "none";
-                    decompiledDisplay.style.display = "none";
-                    opcodesDisplay.style.display = "block";
-                    instructionsDisplay.style.display = "none";
+                } else if (activeTab === "opcodes" && !opcodes) {
                     displayOpcodes(bytecode);
-                } else if (activeTab === "instructions") {
-                    bytecodeDisplay.style.display = "none";
-                    decompiledDisplay.style.display = "none";
-                    opcodesDisplay.style.display = "none";
-                    instructionsDisplay.style.display = "block";
+                } else if (activeTab === "yul" && !yul) {
+                    displayYul(bytecode);
                 }
                 selectedText = "";
             });
         });
 
 
-        [bytecodeDisplay, decompiledDisplay, opcodesDisplay].forEach(display => {
+        [bytecodeDisplay, decompiledDisplay, opcodesDisplay, yulDisplay, instructionsDisplay].forEach(display => {
             display.addEventListener("mouseup", () => {
                 selectedText = window.getSelection().toString().trim();
             });
@@ -937,6 +985,9 @@
                     const data = await response.json();
                     bytecode = data.result;
                     displayBytecode(bytecode);
+                    decompiled = "";
+                    opcodes = "";
+                    yul = ""; // Reset yul when a new contract is searched
                 } catch (error) {
                     console.error("Error fetching bytecode:", error);
                     bytecodeDisplay.textContent = "Error fetching bytecode. Please try again.";
@@ -1191,6 +1242,33 @@
                 console.error("Error displaying opcodes:", error);
                 opcodesDisplay.textContent = "Error displaying opcodes. Please try again.";
             }
+        }
+
+        async function displayYul(bytecode) {
+            try {
+                const contract = new sevm.Contract(bytecode);
+                await patchContract(contract);
+                yul = contract.yul();
+                const highlightedYul = highlightYul(yul);
+                yulDisplay.innerHTML = `<pre>${highlightedYul}</pre>`;
+            } catch (error) {
+                console.error("Error displaying Yul:", error);
+                yulDisplay.textContent = "Error displaying Yul. Please try again.";
+            }
+        }
+
+        function highlightYul(code) {
+            const keywords = ['function', 'let', 'if', 'switch', 'case', 'default', 'for', 'break', 'continue', 'leave'];
+            const keywordRegex = new RegExp(`\\b(${keywords.join('|')})\\b`, 'g');
+
+            return code.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;')
+                .replace(keywordRegex, '<span class="keyword">$1</span>')
+                .replace(/(\/\/.*)/g, '<span class="comment">$1</span>')
+                .replace(/(0x[a-fA-F0-9]+)/g, '<span class="number">$1</span>');
         }
 
         searchButton.addEventListener("click", searchContract);
