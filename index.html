@@ -716,7 +716,7 @@
     <div class="container">
         <div class="left-panel">
             <div class="search-container">
-                <input type="text" id="contract-address" placeholder="Enter Ethereum contract address" />
+                <input type="text" id="contract-address" placeholder="Enter Ethereum contract address or bytecode" />
                 <button id="search-btn">Search</button>
             </div>
             <div class="tab-bar">
@@ -733,7 +733,7 @@
             <div id="instructions-display" style="display: none;">
                 <h2>How to Use This Site</h2>
                 <ol>
-                    <li>Enter an Ethereum contract address in the search bar and click "Search" or press Enter.</li>
+                    <li>Enter an Ethereum contract address or bytecode in the search bar and click "Search" or press Enter.</li>
                     <li>The contract's bytecode will be displayed in the "Bytecode" tab.</li>
                     <li>Click on the "Decompiled" tab to view the decompiled Solidity-like code.</li>
                     <li>The "Opcodes" tab shows the low-level EVM opcodes of the contract.</li>
@@ -755,7 +755,7 @@
 
     <script type="module">
         // Set this to false to disable WebLLM initialization during development
-        const ENABLE_WEBLLM = false;
+        const ENABLE_WEBLLM = true;
 
         import * as webllm from "https://esm.run/@mlc-ai/web-llm";
 
@@ -858,32 +858,54 @@
 
 
         async function searchContract() {
-            const address = contractAddressInput.value.trim();
-            if (address) {
-                try {
-                    const response = await fetch("https://eth.llamarpc.com", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            jsonrpc: "2.0",
-                            method: "eth_getCode",
-                            params: [address],
-                            id: 0,
-                        }),
-                    });
-
-                    const data = await response.json();
-                    bytecode = data.result;
+            const input = contractAddressInput.value.trim();
+            if (input) {
+                if (input.startsWith('0x') && input.length > 42) {
+                    // Input is bytecode
+                    bytecode = input;
                     displayBytecode(bytecode);
                     decompiled = "";
                     opcodes = "";
-                    yul = ""; // Reset yul when a new contract is searched
-                } catch (error) {
-                    console.error("Error fetching bytecode:", error);
-                    bytecodeDisplay.textContent = "Error fetching bytecode. Please try again.";
+                    yul = "";
+                    processNewBytecode();
+                } else {
+                    // Input is an address
+                    try {
+                        const response = await fetch("https://eth.llamarpc.com", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                jsonrpc: "2.0",
+                                method: "eth_getCode",
+                                params: [input],
+                                id: 0,
+                            }),
+                        });
+
+                        const data = await response.json();
+                        bytecode = data.result;
+                        displayBytecode(bytecode);
+                        decompiled = "";
+                        opcodes = "";
+                        yul = "";
+                        processNewBytecode();
+                    } catch (error) {
+                        console.error("Error fetching bytecode:", error);
+                        bytecodeDisplay.textContent = "Error fetching bytecode. Please try again.";
+                    }
                 }
+            }
+        }
+
+        function processNewBytecode() {
+            if (activeTab === "decompiled") {
+                decompileContract(bytecode);
+            } else if (activeTab === "opcodes") {
+                displayOpcodes(bytecode);
+            } else if (activeTab === "yul") {
+                displayYul(bytecode);
             }
         }
 
