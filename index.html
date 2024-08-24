@@ -707,114 +707,6 @@
     </style>
     <script src="https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sevm@0.6/dist/sevm.js"></script>
-    <script>
-
-
-        function highlightSolidity(code) {
-            const keywords = ['function', 'contract', 'address', 'uint', 'int', 'bool', 'string', 'mapping', 'struct', 'enum', 'public', 'private', 'internal', 'external', 'view', 'pure', 'payable', 'return', 'if', 'else', 'for', 'while', 'do', 'break', 'continue', 'new', 'delete', 'memory', 'storage'];
-            const keywordRegex = new RegExp(`\\b(${keywords.join('|')})\\b`, 'g');
-
-            return code.replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;')
-                .replace(keywordRegex, '<span class="keyword">$1</span>')
-                .replace(/(\/\/.*)/g, '<span class="comment">$1</span>')
-                .replace(/(0x[a-fA-F0-9]+)/g, '<span class="number">$1</span>');
-        }
-
-        function highlightOpcodes(code) {
-            const opcodes = [
-                'STOP', 'ADD', 'SUB', 'MUL', 'DIV', 'SDIV', 'MOD', 'SMOD', 'EXP', 'NOT',
-                'LT', 'GT', 'SLT', 'SGT', 'EQ', 'ISZERO', 'AND', 'OR', 'XOR', 'BYTE',
-                'SHL', 'SHR', 'SAR', 'ADDMOD', 'MULMOD', 'SIGNEXTEND', 'KECCAK256',
-                'PC', 'POP', 'MLOAD', 'MSTORE', 'MSTORE8', 'SLOAD', 'SSTORE', 'MSIZE',
-                'GAS', 'ADDRESS', 'BALANCE', 'SELFBALANCE', 'CALLER', 'CALLVALUE',
-                'CALLDATALOAD', 'CALLDATASIZE', 'CALLDATACOPY', 'CODESIZE', 'CODECOPY',
-                'EXTCODESIZE', 'EXTCODECOPY', 'RETURNDATASIZE', 'RETURNDATACOPY',
-                'EXTCODEHASH', 'CREATE', 'CREATE2', 'CALL', 'CALLCODE', 'DELEGATECALL',
-                'STATICCALL', 'RETURN', 'REVERT', 'SELFDESTRUCT', 'INVALID', 'LOG0',
-                'LOG1', 'LOG2', 'LOG3', 'LOG4', 'CHAINID', 'ORIGIN', 'GASPRICE',
-                'BLOCKHASH', 'COINBASE', 'TIMESTAMP', 'NUMBER', 'DIFFICULTY', 'GASLIMIT',
-                'PUSH1', 'PUSH2', 'PUSH3', 'PUSH4', 'PUSH5', 'PUSH6', 'PUSH7', 'PUSH8',
-                'PUSH9', 'PUSH10', 'PUSH11', 'PUSH12', 'PUSH13', 'PUSH14', 'PUSH15', 'PUSH16',
-                'PUSH17', 'PUSH18', 'PUSH19', 'PUSH20', 'PUSH21', 'PUSH22', 'PUSH23', 'PUSH24',
-                'PUSH25', 'PUSH26', 'PUSH27', 'PUSH28', 'PUSH29', 'PUSH30', 'PUSH31', 'PUSH32',
-                'DUP1', 'DUP2', 'DUP3', 'DUP4', 'DUP5', 'DUP6', 'DUP7', 'DUP8',
-                'DUP9', 'DUP10', 'DUP11', 'DUP12', 'DUP13', 'DUP14', 'DUP15', 'DUP16',
-                'SWAP1', 'SWAP2', 'SWAP3', 'SWAP4', 'SWAP5', 'SWAP6', 'SWAP7', 'SWAP8',
-                'SWAP9', 'SWAP10', 'SWAP11', 'SWAP12', 'SWAP13', 'SWAP14', 'SWAP15', 'SWAP16'
-            ];
-
-            const opcodeRegex = new RegExp(`\\b(${opcodes.join('|')})\\b`, 'g');
-            return code.replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;')
-                .replace(opcodeRegex, (match) => {
-                    const explanation = opcodeExplanations[match] || "No explanation available";
-                    return `<span class="opcode-tooltip">${match}<span class="tooltiptext">${explanation}</span></span>`;
-                });
-        }
-
-        async function decompileContract(bytecode) {
-            try {
-                const contract = new sevm.Contract(bytecode);
-                await patchContract(contract);
-                decompiled = contract.solidify();
-                const highlightedDecompiled = highlightSolidity(decompiled);
-                document.getElementById('decompiled-display').innerHTML = `<pre>${highlightedDecompiled}</pre>`;
-            } catch (error) {
-                console.error("Error decompiling contract:", error);
-                document.getElementById('decompiled-display').textContent = "Error decompiling contract. Please try again.";
-            }
-        }
-
-        function displayOpcodes(bytecode) {
-            try {
-                const contract = new sevm.Contract(bytecode);
-                const opcodes = contract.opcodes();
-                const opcodesText = opcodes.map(opcode => opcode.format()).join('\n');
-                const highlightedOpcodes = highlightOpcodes(opcodesText);
-                document.getElementById('opcodes-display').innerHTML = `<pre>${highlightedOpcodes}</pre>`;
-            } catch (error) {
-                console.error("Error displaying opcodes:", error);
-                document.getElementById('opcodes-display').textContent = "Error displaying opcodes. Please try again.";
-            }
-        }
-
-        let yul = "";
-
-        async function displayYul(bytecode) {
-            try {
-                const contract = new sevm.Contract(bytecode);
-                await patchContract(contract);
-                yul = contract.yul();
-                const highlightedYul = highlightYul(yul);
-                document.getElementById('yul-display').innerHTML = `<pre>${highlightedYul}</pre>`;
-            } catch (error) {
-                console.error("Error displaying Yul:", error);
-                document.getElementById('yul-display').textContent = "Error displaying Yul. Please try again.";
-            }
-        }
-
-        function highlightYul(code) {
-            const keywords = ['function', 'let', 'if', 'switch', 'case', 'default', 'for', 'break', 'continue', 'leave'];
-            const keywordRegex = new RegExp(`\\b(${keywords.join('|')})\\b`, 'g');
-
-            return code.replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;')
-                .replace(keywordRegex, '<span class="keyword">$1</span>')
-                .replace(/(\/\/.*)/g, '<span class="comment">$1</span>')
-                .replace(/(0x[a-fA-F0-9]+)/g, '<span class="number">$1</span>');
-        }
-
-    </script>
 </head>
 
 <body class="catppuccin-mocha">
@@ -863,7 +755,7 @@
 
     <script type="module">
         // Set this to false to disable WebLLM initialization during development
-        const ENABLE_WEBLLM = true;
+        const ENABLE_WEBLLM = false;
 
         import * as webllm from "https://esm.run/@mlc-ai/web-llm";
 

@@ -1,8 +1,8 @@
 ## LLEVM - Talk to EVM Bytecode
-LLEVM allows you to decompile and converse with evm bytecode.
+LLEVM allows you to decompile and converse with evm bytecode, decompiled solidity, Yul and Opcodes.
 
 ### Note
-The LLM (Hermes-2-Pro-Llama-3-8B) runs entirely in your browser using WebGPU. Please note that the LLM's output may not always be accurate, so don't treat it as definitive.
+The LLM (Hermes-2-Pro-Llama-3-8B) runs entirely in your browser using WebGPU. Please note that the LLM's output may not always be accurate, so don't treat it as definitive. 
 
 For demonstration purposes only.
 
