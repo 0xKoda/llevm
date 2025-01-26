@@ -1207,7 +1207,7 @@
                 }
             };
 
-            const selectedModel = "Qwen2.5-Coder-7B-Instruct-q4f16_1-MLC";
+            const selectedModel = "DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC";
             const appConfig = webllm.prebuiltAppConfig;
             appConfig.useIndexedDBCache = true;
             engine = new webllm.MLCEngine({
@@ -1306,10 +1306,17 @@ Allocate memory: let ptr := mload(0x40); mstore(0x40, add(ptr, size))`;
 
 You are provided with a question from a user related to the current view (${activeTab}). Answer the user's request accurately and concisely, leveraging your knowledge of the EVM and the specific context. Your output must be both precise and concise. The content of the code the user is looking at is provided to help you answer them in context.`;
 
+                const MAX_CONTEXT_LENGTH = 11000;
+                const BUFFER_FOR_USER_MESSAGE = 1000; // Reserve space for user message
+
+                // Calculate available space for context
+                const systemPromptLength = systemContent.length;
+                const availableSpace = MAX_CONTEXT_LENGTH - systemPromptLength - BUFFER_FOR_USER_MESSAGE;
+
                 let contextContent = selectedText;
                 if (!contextContent) {
                     const activeDisplay = document.getElementById(`${activeTab}-display`);
-                    contextContent = activeDisplay.textContent.slice(0, 4000); // Limit to ~4000 characters due to context limit
+                    contextContent = activeDisplay.textContent.slice(0, availableSpace);
                 }
 
                 systemContent += `This is the ${activeTab} content: \`\`\`${contextContent}\`\`\``;
